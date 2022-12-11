@@ -1,13 +1,14 @@
 import os
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, abort
 from transcriber import transcribe
+from werkzeug.utils import secure_filename
 # initialize our Flask application
 app = Flask(__name__)
 
 
 ALLOWED_EXTENSIONS = set(['m4a'])
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024
-app.config['UPLOAD_EXTENSIONS'] = ['.m4a', '.txt']
+app.config['UPLOAD_EXTENSIONS'] = ['.m4a']
 app.config['UPLOAD_PATH'] = 'tmp'
 
 
@@ -25,19 +26,21 @@ def upload_file():
     path = app.config['UPLOAD_PATH']
     if request.method == 'POST':
         uploaded_file = request.files['file']
-        if uploaded_file.filename != '':
-            uploaded_file.save(os.path.join(
-                path, uploaded_file.filename))
-        file = os.path.join(path, uploaded_file.filename)
-        content = transcribe(file)
-        return jsonify(content)
-
-
-# @app.route("/message", methods=["GET"])
-# def message():
-#     posted_data = request.get_json()
-#     name = posted_data['name']
-#     return jsonify(" Hope you are having a good time " + name + "!!!")
+        filename = secure_filename(uploaded_file.filename)
+        if 'file' not in request.files:
+            resp = jsonify({'message': 'No file part in the request'})
+            resp.status_code = 400
+            return resp
+        elif filename != '':
+            file_ext = os.path.splitext(filename)[1]
+            if file_ext not in app.config['UPLOAD_EXTENSIONS']:
+                return abort(400)
+            else:
+                uploaded_file.save(os.path.join(
+                    path, filename))
+                file = os.path.join(path, filename)
+                content = transcribe(file)
+                return jsonify(content)
 
 
 #  main thread of execution to start the server
