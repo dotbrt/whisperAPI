@@ -1,0 +1,7 @@
+.DS_Store
+*.m4a
+__pycache__/
+tmp/*
+test_recordings/*
+test_recordings/
+test.txt
